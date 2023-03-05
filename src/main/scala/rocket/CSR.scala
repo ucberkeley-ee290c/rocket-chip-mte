@@ -5,6 +5,10 @@ package freechips.rocketchip.rocket
 
 import chisel3._
 import chisel3.util.{BitPat, Cat, Fill, Mux1H, PopCount, PriorityMux, RegEnable, UIntToOH, Valid, log2Ceil, log2Up}
+import Chisel._
+import Chisel.ImplicitConversions._
+import chisel3.{DontCare, WireInit, withClock}
+import chisel3.util.MixedVec
 import freechips.rocketchip.config.Parameters
 import freechips.rocketchip.devices.debug.DebugModuleKey
 import freechips.rocketchip.tile._
@@ -360,9 +364,15 @@ class CSRFile(
   customCSRs: Seq[CustomCSR] = Nil)(implicit p: Parameters)
     extends CoreModule()(p)
     with HasCoreParameters {
-  val io = IO(new CSRFileIO {
-    val customCSRs = Output(Vec(CSRFile.this.customCSRs.size, new CustomCSRIO))
-  })
+  val io = new CSRFileIO {
+    val customCSRs = MixedVec(CSRFile.this.customCSRs.map( csr =>
+      if (csr.hasWritePort) {
+        new CustomCSRIOWritable
+      } else {
+        new CustomCSRIO
+      }
+    ))
+  }
 
   val reset_mstatus = WireDefault(0.U.asTypeOf(new MStatus()))
   reset_mstatus.mpp := PRV.M.U
@@ -1423,9 +1433,33 @@ class CSRFile(
     }
     for ((io, csr, reg) <- (io.customCSRs, customCSRs, reg_custom).zipped) {
       val mask = csr.mask.U(xLen.W)
+<<<<<<< HEAD
       when (decoded_addr(csr.id)) {
         reg := (wdata & mask) | (reg & ~mask)
         io.wen := true.B
+=======
+      val masked_internal_wdata = (wdata & mask) | (reg & ~mask)
+      io match {
+        case io_writable : CustomCSRIOWritable => {
+          io_writable.csrf_wen := decoded_addr(csr.id)
+          /* Direct writes via wport always take precedence over write commands
+             through the CSRF */
+          when (io_writable.wport_wen) {
+            reg := io_writable.wport_wdata
+            io.wen := true
+          } .elsewhen (decoded_addr(csr.id)) {
+            reg := masked_internal_wdata
+            io.wen := true
+          }
+        }
+
+        case _ => {
+          when (decoded_addr(csr.id)) {
+            reg := masked_internal_wdata
+            io.wen := true
+          }
+        }
+>>>>>>> ebe52ba7e (Added optional write ports for CustomCSR)
       }
     }
     if (usingVector) {
