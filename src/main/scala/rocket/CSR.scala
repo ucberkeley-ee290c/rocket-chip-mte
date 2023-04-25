@@ -1433,33 +1433,10 @@ class CSRFile(
     }
     for ((io, csr, reg) <- (io.customCSRs, customCSRs, reg_custom).zipped) {
       val mask = csr.mask.U(xLen.W)
-<<<<<<< HEAD
-      when (decoded_addr(csr.id)) {
-        reg := (wdata & mask) | (reg & ~mask)
-        io.wen := true.B
-=======
       val masked_internal_wdata = (wdata & mask) | (reg & ~mask)
-      io match {
-        case io_writable : CustomCSRIOWritable => {
-          io_writable.csrf_wen := decoded_addr(csr.id)
-          /* Direct writes via wport always take precedence over write commands
-             through the CSRF */
-          when (io_writable.wport_wen) {
-            reg := io_writable.wport_wdata
-            io.wen := true
-          } .elsewhen (decoded_addr(csr.id)) {
-            reg := masked_internal_wdata
-            io.wen := true
-          }
-        }
-
-        case _ => {
-          when (decoded_addr(csr.id)) {
-            reg := masked_internal_wdata
-            io.wen := true
-          }
-        }
->>>>>>> ebe52ba7e (Added optional write ports for CustomCSR)
+      when (decoded_addr(csr.id)) {
+        reg := masked_internal_wdata
+        io.wen := true
       }
     }
     if (usingVector) {
@@ -1602,4 +1579,25 @@ class CSRFile(
   def isaStringToMask(s: String) = s.map(x => 1 << (x - 'A')).foldLeft(0)(_|_)
   def formFS(fs: UInt) = if (coreParams.haveFSDirty) fs else Fill(2, fs.orR)
   def formVS(vs: UInt) = if (usingVector) vs else 0.U
+
+  /* 
+  Additional custom wports for CSRs 
+  We put this last to override any internal writes
+  */
+  for ((io, csr, reg) <- (io.customCSRs, customCSRs, reg_custom).zipped) {
+    val mask = csr.mask.U(xLen.W)
+    val masked_internal_wdata = (wdata & mask) | (reg & ~mask)
+
+    io match {
+      case io_writable : CustomCSRIOWritable => {
+        when (io_writable.wport_wen) {
+          reg := io_writable.wport_wdata
+          io.wen := true
+        }
+      }
+
+      case _ => {
+      }
+    }
+  }
 }
