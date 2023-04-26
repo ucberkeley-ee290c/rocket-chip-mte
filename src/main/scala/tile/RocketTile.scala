@@ -75,7 +75,7 @@ class RocketTile private(
   tile_master_blocker.foreach(lm => connectTLSlave(lm.controlNode, xBytes))
 
   // TODO: this doesn't block other masters, e.g. RoCCs
-  tlOtherMastersNode := tile_master_blocker.map { _.node := tlMasterXbar.node } getOrElse { tlMasterXbar.node }
+  tlOtherMastersNode := TLBuffer() := tile_master_blocker.map { _.node := tlMasterXbar.node } getOrElse { tlMasterXbar.node }
   masterNode :=* tlOtherMastersNode
   DisableMonitors { implicit p => tlSlaveXbar.node :*= slaveNode }
 
