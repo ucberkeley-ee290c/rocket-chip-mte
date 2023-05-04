@@ -5,7 +5,6 @@ package freechips.rocketchip.rocket
 
 import chisel3._
 import chisel3.util.{BitPat, Cat, Fill, Mux1H, PopCount, PriorityMux, RegEnable, UIntToOH, Valid, log2Ceil, log2Up}
-import Chisel._
 import Chisel.ImplicitConversions._
 import chisel3.{DontCare, WireInit, withClock}
 import chisel3.util.MixedVec
