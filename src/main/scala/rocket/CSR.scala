@@ -1591,7 +1591,6 @@ class CSRFile(
       case io_writable : CustomCSRIOWritable => {
         when (io_writable.wport_wen) {
           reg := io_writable.wport_wdata
-          io.wen := true
         }
       }
 
